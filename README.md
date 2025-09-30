@@ -1,80 +1,88 @@
-# Modelo ER para Gestión de Farmacia — Resumen
+# Modelo ER para Gestión de Farmacia - Resumen
 
-## Entidades (PK, atributos — dominio y ejemplo)
+<img width="589" height="662" alt="Diagrama sin título drawio" src="https://github.com/user-attachments/assets/d29537cf-e87a-447d-86d4-acb0cf15da1a" />
+
+---
+
+## Entidades
+
 ### FAMILIA
-- **PK:** `familia_id` (INT)  
-- **Atributos:** `nombre` (VARCHAR). Ej: `"Antibióticos"`.
+- **PK:** `familia_id` (INT) 
+- **Atributos:** `nombre` (VARCHAR). Ej: `"Antibióticos"`.  
+- **Descripción:** Agrupa medicamentos según la indicación terapéutica o el grupo farmacológico (por ejemplo: analgésicos, antihipertensivos). Facilita la búsqueda de sustitutos y el filtrado por categoría.
+- **Dominio:** `familia_id` ∈ ENTERO POSITIVO; `nombre` ∈ VARCHAR(100) no vacío.
+
+---
 
 ### LABORATORIO
-- **PK:** `lab_id` (INT)  
-- **Atributos:** `nombre`, `telefono`, `fax`, `direccion_postal` (compuesto), `persona_contacto`.  
-  Ej: `{ nombre: "NaturaLab S.A.", telefono: "+34 912345678" }`.
+- **PK:** `lab_id` 
+- **Atributos:** `nombre`, `telefono`, `fax`, `direccion_postal`, `persona_contacto`.  
+  Ej: `{ nombre: "NaturaLab S.A.", telefono: "+34 912345678" }`.  
+- **Descripción:** Representa el proveedor o fabricante externo que suministra medicamentos a la farmacia. También identifica al responsable del medicamento cuando no se fabrica internamente.  
+- **Dominio:**  
+  - `nombre`: cadena no vacía. Ej.: `"NaturaLab S.A."`.  
+  - `telefono`/`fax`: cadenas con formato internacional opcional. Ej.: `"+34 912345678"`.  
+  - `direccion_postal`: número del código postal (`38107`).  
+  - `persona_contacto`: nombre del contacto comercial. Ej.: `"Laura Gómez"`.
+
+---
 
 ### MEDICAMENTO
-- **PK:** `med_id` (INT)  
-- **Atributos:**  
-  - `nombre` (VARCHAR). Ej: `"Ibuprofeno 400 mg"`  
-  - `tipo` (VARCHAR: jarabe|comprimido|pomada). Ej: `"comprimido"`  
-  - `unidades_stock` (INT ≥ 0). Ej: `120`  
-  - `unidades_vendidas` (INT ≥ 0) — **derivado** de LINEA_VENTA o persistido con triggers. Ej: `430`  
-  - `precio_unitario` (DECIMAL ≥ 0). Ej: `3.20`  
-  - `requiere_receta` (BOOLEAN). Ej: `TRUE`/`FALSE`  
-  - `lab_id` (FK → LABORATORIO, **NULLABLE**; NULL = fabricado internamente)  
-  - `familia_id` (FK → FAMILIA, NULLABLE)
+- **PK:** `med_id`  
+- **Atributos:** `nombre`, `tipo`, `unidades_stock`, `unidades_vendidas`, `precio_unitario`, `requiere_receta`, `lab_id`, `familia_id`.  
+- **Descripción:** Catálogo de fármacos disponibles en la farmacia: identifica la presentación, su stock, precio y si necesita receta. Sirve como fuente de referencia para ventas, compras y gestión de inventario.  
+- **Dominio:**  
+  - `nombre`: cadena no vacía. Ej: `"Ibuprofeno 400 mg"`.  
+  - `tipo`: valor del conjunto permitido; evita valores libres si quieres normalizar. Ej: `"comprimido"`.
+  - `unidades_stock`: entero ≥ 0. Ej: `120`.
+  - `unidades_vendidas`: entero ≥ 0.  Ej: `430`.
+  - `precio_unitario`: decimal con dos decimales (≥ 0). Ej: `3.20`.
+  - `requiere_receta`: booleano. Ej: `TRUE`/`FALSE`.
+
+---
 
 ### CLIENTE
-- **PK:** `cliente_id` (INT)  
-- **Atributos:** `nombre`, `telefono`, `email`, `direccion` (compuesto), `es_credito` (BOOLEAN).  
-  Ej: `{ nombre: "María Pérez", es_credito: true }`.
+- **PK:** `cliente_id`  
+- **Atributos:** `nombre`, `telefono`, `email`, `banco`, `es_credito`.  
+  Ej: `{ nombre: "María Pérez", es_credito: true }`.  
+- **Descripción:** Registro de personas o entidades que compran en la farmacia. Se distingue entre clientes que pagan al contado y clientes que tienen condiciones de crédito (p. ej. pago a fin de mes).  
+- **Dominio:**  
+  - `nombre`: cadena no vacía.  
+  - `telefono`, `email`: cadenas con formatos habituales.  
+  - `banco`: cadena no vacía.
+  - `IBAN`:  cadena no vacía.
+  - `es_credito`: booleano.  
 
-### CUENTA_BANCARIA (recomendada)
-- **PK:** `cuenta_id` (INT)  
-- **Atributos:** `cliente_id` (FK), `banco`, `iban`, `titular`.  
-  Uso: evita atributos condicionales en CLIENTE.
+---
 
 ### VENTA
-- **PK:** `venta_id` (INT)  
-- **Atributos:** `cliente_id` (FK NOT NULL), `fecha_compra` (DATE), `fecha_pago` (DATE NULLABLE), `total` (DECIMAL, derivable).
-
-### LINEA_VENTA (entidad asociativa)
-- **PK:** `(venta_id, med_id)` (compuesta) o `linea_id` (surrogate)  
-- **Atributos:** `venta_id` (FK), `med_id` (FK), `cantidad` (INT > 0), `precio_unitario` (DECIMAL ≥ 0).  
-  Semántica: cada fila liga **1 VENTA** con **1 MEDICAMENTO** y almacena cantidad y precio histórico.
-
----
-
-## Relaciones (nombre, cardinalidad min..max y explicación)
-- **FAMILIA — PERTENECE — MEDICAMENTO**  
-  `FAMILIA (1..1) — PERTENECE — (0..N) MEDICAMENTO`  
-  => Una familia agrupa 0..N medicamentos. Un medicamento pertenece a 0..1 familia (simplificado).
-
-- **LABORATORIO — SUMINISTRA — MEDICAMENTO**  
-  `LABORATORIO (1..1) — SUMINISTRA — (0..N) MEDICAMENTO`  
-  => Un laboratorio suministra muchos medicamentos; `med.lab_id = NULL` indica fabricación propia.
-
-- **VENTA — CONTIENE — MEDICAMENTO** (implementada por LINEA_VENTA)  
-  `VENTA (1..1) — 1..N LINEA_VENTA`  
-  `MEDICAMENTO (1..1) — 0..N LINEA_VENTA`  
-  => Una venta tiene ≥1 líneas; cada línea pertenece a 1 venta y referencia 1 medicamento.
-
-- **CLIENTE — REALIZA — VENTA**  
-  `CLIENTE (1..1) — REALIZA — (0..N) VENTA`  
-  => Un cliente puede realizar 0..N ventas; cada venta tiene exactamente 1 cliente.
-
-- **CLIENTE — POSEE_CUENTA — CUENTA_BANCARIA**  
-  `CLIENTE (1..1) — POSEE_CUENTA — (0..N) CUENTA_BANCARIA`  
-  => Si `es_credito = true` debería existir ≥1 cuenta para el cliente (forzar por trigger o lógica de aplicación).
+- **PK:** `venta_id` 
+- **Atributos:** `cliente_id`, `fecha_compra`, `fecha_pago`, `total`.  
+- **Descripción:** Representa una transacción de venta a un cliente en una fecha concreta; registra también la fecha de pago cuando aplique (clientes con crédito).  
+- **Dominio:**  
+  - `fecha_compra`: fecha de la operación. Ej.: `2025-09-15`.
+  - `total`: cantidad numérica derivable.
 
 ---
 
-## Restricciones semánticas propuestas (esenciales)
+## Relaciones
+- **FAMILIA - PERTENECE - MEDICAMENTO**  
+  => Una familia agrupa 1..N medicamentos. Un medicamento pertenece a 0..1 familia.
+
+- **LABORATORIO - SUMINISTRA - MEDICAMENTO**  
+  => Un laboratorio suministra muchos medicamentos. Un medicamento es suministrado por 0..1 laboratorio.
+
+- **VENTA - LÍNEA VENTA - MEDICAMENTO**
+  => Una venta tiene ≥1 medicamentos. Cada medicamento se puede encontrar en 0..n ventas.
+
+- **CLIENTE - REALIZA - VENTA**  
+  => Un cliente puede realizar 0..n ventas. Cada venta tiene exactamente 1 cliente.
+
+---
+
+## Restricciones semánticas propuestas
 - `MEDICAMENTO.unidades_stock >= 0`. Impedir venta si `cantidad > unidades_stock`.  
-- `MEDICAMENTO.unidades_vendidas = SUM(LINEA_VENTA.cantidad)` (derivado) — si se persiste, mantener con triggers.  
-- `MEDICAMENTO.lab_id` **NULLABLE** (NULL = fabricado internamente).  
-- `VENTA.cliente_id` NOT NULL (cada venta debe tener cliente).  
-- `CHECK(fecha_pago IS NULL OR fecha_pago >= fecha_compra)`.  
-- `LINEA_VENTA.precio_unitario` guarda precio histórico (no depender de MEDICAMENTO.precio_unitario).  
-- Si `MEDICAMENTO.requiere_receta = TRUE` y se requiere auditar la receta, añadir entidad `RECETA` y relacionarla con `LINEA_VENTA`.  
-- Para clientes con crédito, controlar existencia de `CUENTA_BANCARIA` mediante trigger o validación en la aplicación.
+- `MEDICAMENTO.lab_id` (NULL = fabricado internamente).  
+- `VENTA.cliente_id` NOT NULL (cada venta debe tener cliente).
 
 ---
