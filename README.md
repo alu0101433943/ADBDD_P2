@@ -1,4 +1,4 @@
-# Modelo ER para Gestión de Farmacia - Resumen
+# Modelo ER para Gestión de Farmacia
 
 <img width="589" height="662" alt="Diagrama sin título drawio" src="https://github.com/user-attachments/assets/d29537cf-e87a-447d-86d4-acb0cf15da1a" />
 
